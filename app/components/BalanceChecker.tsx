@@ -113,6 +113,25 @@ export default function BalanceChecker() {
     }
   };
 
+  const handleCopyAllValidKeys = async () => {
+    const validKeys = results
+      .filter(r => r.status === 'success')
+      .map(r => r.apiKey);
+    
+    if (validKeys.length === 0) {
+      alert('没有可用的 API Key');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(validKeys.join('\n'));
+      alert(`已复制 ${validKeys.length} 个可用的 API Key`);
+    } catch (err) {
+      console.error('复制失败:', err);
+      alert('复制失败，请重试');
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
       {/* 上部分：模型名称列表 */}
@@ -188,9 +207,23 @@ export default function BalanceChecker() {
       {results.length > 0 && (
         <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              查询结果 ({results.length})
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                查询结果 ({results.length})
+              </h2>
+              {results.filter(r => r.status === 'success').length > 0 && (
+                <button
+                  onClick={handleCopyAllValidKeys}
+                  className="px-2 py-2 bg-green-600 hover:bg-green-700 text-white text-xs cursor-pointer font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow"
+                  title="复制所有查询成功的 API Key"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  一键复制所有可用API
+                </button>
+              )}
+            </div>
             <div className="flex gap-4 text-sm">
               <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
