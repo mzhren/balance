@@ -21,6 +21,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
   const [sharedApis, setSharedApis] = useState<SharedApi[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [newApi, setNewApi] = useState({
     provider: selectedProvider,
     apiKey: '',
@@ -28,6 +29,12 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
     balance: '',
     currency: 'CNY',
   });
+
+  // 检查 URL 参数中是否有 user=admin
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setIsAdmin(searchParams.get('user') === 'admin');
+  }, []);
 
   // 当 selectedProvider 改变时，更新 newApi 的 provider
   useEffect(() => {
@@ -332,15 +339,17 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
                     添加时间: {new Date(api.addedAt).toLocaleString('zh-CN')}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleDeleteApi(api.id)}
-                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                  title="删除"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDeleteApi(api.id)}
+                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                    title="删除"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           ))}
