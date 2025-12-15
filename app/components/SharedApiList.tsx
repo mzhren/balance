@@ -13,17 +13,26 @@ interface SharedApi {
   currency?: string;
 }
 
-export default function SharedApiList() {
+interface SharedApiListProps {
+  selectedProvider: string;
+}
+
+export default function SharedApiList({ selectedProvider }: SharedApiListProps) {
   const [sharedApis, setSharedApis] = useState<SharedApi[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newApi, setNewApi] = useState({
-    provider: 'deepseek',
+    provider: selectedProvider,
     apiKey: '',
     description: '',
     balance: '',
     currency: 'CNY',
   });
+
+  // 当 selectedProvider 改变时，更新 newApi 的 provider
+  useEffect(() => {
+    setNewApi(prev => ({ ...prev, provider: selectedProvider }));
+  }, [selectedProvider]);
 
   const providers = [
     { value: 'deepseek', label: 'DeepSeek' },

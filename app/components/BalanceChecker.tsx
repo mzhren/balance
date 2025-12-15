@@ -12,35 +12,44 @@ const PROVIDERS = [
   { value: 'siliconflow', label: '硅基流动' },
 ];
 
+// 模型平台选择组件
+interface ProviderSelectorProps {
+  selectedProvider: string;
+  onSelectProvider: (provider: string) => void;
+}
+
+function ProviderSelector({ selectedProvider, onSelectProvider }: ProviderSelectorProps) {
+  return (
+    <div className="mb-6">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+        选择模型平台
+      </h2>
+      <div className="flex flex-wrap gap-3">
+        {PROVIDERS.map((provider) => (
+          <button
+            key={provider.value}
+            onClick={() => onSelectProvider(provider.value)}
+            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+              selectedProvider === provider.value
+                ? 'bg-blue-600 text-white shadow-md scale-105'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            {provider.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BalanceChecker() {
   const [selectedProvider, setSelectedProvider] = useState('deepseek');
   const [activeTab, setActiveTab] = useState<'balance' | 'shared'>('balance');
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
-      {/* 上部分：模型名称列表 */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-          选择模型平台
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          {PROVIDERS.map((provider) => (
-            <button
-              key={provider.value}
-              onClick={() => setSelectedProvider(provider.value)}
-              className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                selectedProvider === provider.value
-                  ? 'bg-blue-600 text-white shadow-md scale-105'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {provider.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 中间部分：Tab 选项卡 */}
+      {/* Tab 选项卡 */}
       <div className="mb-6">
         <div className="flex border-b border-gray-200 dark:border-gray-600 mb-6">
           <button
@@ -65,11 +74,17 @@ export default function BalanceChecker() {
           </button>
         </div>
 
+        {/* 模型平台选择 */}
+        <ProviderSelector 
+          selectedProvider={selectedProvider}
+          onSelectProvider={setSelectedProvider}
+        />
+
         {/* Tab 内容 */}
         {activeTab === 'balance' ? (
           <BalanceQuery selectedProvider={selectedProvider} />
         ) : (
-          <SharedApiList />
+          <SharedApiList selectedProvider={selectedProvider} />
         )}
       </div>
     </div>
