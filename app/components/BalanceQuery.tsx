@@ -75,12 +75,12 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
 
   const handleQuery = async () => {
     const keys = parseApiKeys(apiKeysInput);
-    
+
     if (keys.length === 0) {
       alert('请输入至少一个 API Key');
       return;
     }
-    
+
     setIsChecking(true);
     setResults(keys.map(key => ({
       apiKey: key,
@@ -90,7 +90,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
 
     const promises = keys.map(key => checkBalance(key, selectedProvider));
     const allResults = await Promise.all(promises);
-    
+
     setResults(allResults);
     setIsChecking(false);
   };
@@ -120,7 +120,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
     const validKeys = results
       .filter(r => r.status === 'success')
       .map(r => r.apiKey);
-    
+
     if (validKeys.length === 0) {
       alert('没有可用的 API Key');
       return;
@@ -137,7 +137,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
 
   const handleSaveAllToDatabase = async () => {
     const validResults = results.filter(r => r.status === 'success');
-    
+
     if (validResults.length === 0) {
       alert('没有可用的 API Key 可以保存');
       return;
@@ -279,7 +279,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
               )}
             </div>
           </div>
-        
+
           <div className="space-y-3">
             {results.map((result, index) => (
               <div
@@ -359,13 +359,13 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
                             </div>
                           )}
                         </div>
-                        {result.details && (
+                        {result.details != null && (
                           <details className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                             <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
                               查看详细信息
                             </summary>
                             <pre className="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded text-xs overflow-x-auto">
-                              {JSON.stringify(result.details, null, 2)}
+                              {typeof result.details === 'string' ? result.details : JSON.stringify(result.details, null, 2)}
                             </pre>
                           </details>
                         )}
