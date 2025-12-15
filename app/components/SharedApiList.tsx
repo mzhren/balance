@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase, type ApiKeyPool } from '@/lib/supabase';
 
 interface SharedApi {
   id: string;
@@ -8,16 +9,20 @@ interface SharedApi {
   apiKey: string;
   description: string;
   addedAt: string;
-  status: 'active' | 'inactive';
+  balance?: number;
+  currency?: string;
 }
 
 export default function SharedApiList() {
   const [sharedApis, setSharedApis] = useState<SharedApi[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [newApi, setNewApi] = useState({
     provider: 'deepseek',
     apiKey: '',
     description: '',
+    balance: '',
+    currency: 'CNY',
   });
 
   const providers = [
@@ -28,29 +33,102 @@ export default function SharedApiList() {
     { value: 'siliconflow', label: '硅基流动' },
   ];
 
-  const handleAddApi = () => {
+  // 从 Supabase 获取 API 列表
+  const fetchApis = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('api-key-pool')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('获取 API 列表失败:', error);
+        alert('获取数据失败：' + error.message);
+        return;
+      }
+
+      const mappedData: SharedApi[] = (data || []).map((row: ApiKeyPool) => ({
+        id: row.id || '',
+        provider: row.llm,
+        apiKey: row.key,
+        description: row.description || '',
+        addedAt: row.created_at || new Date().toISOString(),
+        balance: row.balance,
+        currency: row.currency,
+      }));
+
+      setSharedApis(mappedData);
+    } catch (err) {
+      console.error('获取 API 列表异常:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApis();
+  }, [fetchApis]);
+
+  const handleAddApi = async () => {
     if (!newApi.apiKey.trim()) {
       alert('请输入 API Key');
       return;
     }
 
-    const api: SharedApi = {
-      id: Date.now().toString(),
-      provider: newApi.provider,
-      apiKey: newApi.apiKey,
-      description: newApi.description,
-      addedAt: new Date().toISOString(),
-      status: 'active',
-    };
+    setIsLoading(true);
+    try {
+      const insertData: Omit<ApiKeyPool, 'id' | 'created_at'> = {
+        llm: newApi.provider,
+        key: newApi.apiKey,
+        description: newApi.description || undefined,
+        balance: newApi.balance ? Number(newApi.balance) : undefined,
+        currency: newApi.currency || undefined,
+      };
 
-    setSharedApis([...sharedApis, api]);
-    setNewApi({ provider: 'deepseek', apiKey: '', description: '' });
-    setShowAddForm(false);
+      const { error } = await supabase
+        .from('api-key-pool')
+        .insert([insertData]);
+
+      if (error) {
+        console.error('添加 API 失败:', error);
+        alert('添加失败：' + error.message);
+        return;
+      }
+
+      setNewApi({ provider: 'deepseek', apiKey: '', description: '', balance: '', currency: 'CNY' });
+      setShowAddForm(false);
+      await fetchApis();
+    } catch (err) {
+      console.error('添加 API 异常:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteApi = (id: string) => {
-    if (confirm('确定要删除这个 API Key 吗？')) {
-      setSharedApis(sharedApis.filter(api => api.id !== id));
+  const handleDeleteApi = async (id: string) => {
+    if (!confirm('确定要删除这个 API Key 吗？')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('api-key-pool')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('删除 API 失败:', error);
+        alert('删除失败：' + error.message);
+        return;
+      }
+
+      await fetchApis();
+    } catch (err) {
+      console.error('删除 API 异常:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -68,7 +146,17 @@ export default function SharedApiList() {
   };
 
   return (
-    <div>
+    <div className="relative">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">加载中...</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -136,6 +224,34 @@ export default function SharedApiList() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  余额（可选）
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newApi.balance}
+                  onChange={(e) => setNewApi({ ...newApi, balance: e.target.value })}
+                  placeholder="100.00"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  币种
+                </label>
+                <select
+                  value={newApi.currency}
+                  onChange={(e) => setNewApi({ ...newApi, currency: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="CNY">CNY</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={handleAddApi}
@@ -164,7 +280,7 @@ export default function SharedApiList() {
             暂无共享 API
           </h3>
           <p className="text-gray-500 dark:text-gray-400">
-            点击上方"添加 API"按钮来添加您的第一个共享 API Key
+            点击上方「添加 API」按钮来添加您的第一个共享 API Key
           </p>
         </div>
       ) : (
@@ -196,6 +312,11 @@ export default function SharedApiList() {
                   {api.description && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                       {api.description}
+                    </p>
+                  )}
+                  {(api.balance !== undefined || api.currency) && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      <span className="font-medium">余额:</span> {api.balance?.toFixed(2) || 'N/A'} {api.currency || 'CNY'}
                     </p>
                   )}
                   <p className="text-xs text-gray-500 dark:text-gray-500">
