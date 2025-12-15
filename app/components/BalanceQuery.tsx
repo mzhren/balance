@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { supabase, type ApiKeyPool } from '@/lib/supabase';
 
 export interface BalanceResult {
   apiKey: string;
@@ -11,7 +12,7 @@ export interface BalanceResult {
   currency?: string;
   error?: string;
   status: 'success' | 'error' | 'loading';
-  details?: any;
+  details?: unknown;
 }
 
 interface BalanceQueryProps {
@@ -134,6 +135,43 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
     }
   };
 
+  const handleSaveAllToDatabase = async () => {
+    const validResults = results.filter(r => r.status === 'success');
+    
+    if (validResults.length === 0) {
+      alert('没有可用的 API Key 可以保存');
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const insertData: Omit<ApiKeyPool, 'id' | 'created_at'>[] = validResults.map(result => ({
+        llm: result.provider,
+        key: result.apiKey,
+        balance: result.balance,
+        currency: result.currency,
+        description: undefined,
+      }));
+
+      const { error } = await supabase
+        .from('api-key-pool')
+        .insert(insertData);
+
+      if (error) {
+        console.error('保存失败:', error);
+        alert('保存失败：' + error.message);
+        return;
+      }
+
+      alert(`成功保存 ${validResults.length} 个 API Key 到数据库`);
+    } catch (err) {
+      console.error('保存异常:', err);
+      alert('保存失败，请重试');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   return (
     <div>
       {/* API Key 输入框 */}
@@ -192,16 +230,29 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
                 查询结果 ({results.length})
               </h2>
               {results.filter(r => r.status === 'success').length > 0 && (
-                <button
-                  onClick={handleCopyAllValidKeys}
-                  className="px-2 py-2 bg-green-600 hover:bg-green-700 text-white text-xs cursor-pointer font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow"
-                  title="复制所有查询成功的 API Key"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  一键复制所有可用API
-                </button>
+                <>
+                  <button
+                    onClick={handleCopyAllValidKeys}
+                    className="px-2 py-2 bg-green-600 hover:bg-green-700 text-white text-xs cursor-pointer font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow"
+                    title="复制所有查询成功的 API Key"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    一键复制所有可用API
+                  </button>
+                  <button
+                    onClick={handleSaveAllToDatabase}
+                    disabled={isChecking}
+                    className="px-2 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white text-xs cursor-pointer font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow"
+                    title="保存所有查询成功的 API Key 到数据库"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    一键保存到数据库
+                  </button>
+                </>
               )}
             </div>
             <div className="flex gap-4 text-sm">
