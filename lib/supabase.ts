@@ -18,7 +18,7 @@ if (!supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface ApiKeyPool {
-  id?: number;
+  id?: string;
   created_at?: string;
   llm: string;
   key: string;
