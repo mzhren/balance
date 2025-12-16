@@ -3,25 +3,25 @@
 import { useState, useEffect } from 'react';
 
 export default function DonateButton() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 监听滚动，控制按钮显示
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsVisible(window.scrollY > 200);
-    };
+  // useEffect(() => {
+  //   const handleScroll = () => {
+  //     setIsVisible(window.scrollY > 200);
+  //   };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  //   window.addEventListener('scroll', handleScroll, { passive: true });
+  //   return () => window.removeEventListener('scroll', handleScroll);
+  // }, []);
 
   return (
     <>
       {/* 赞赏按钮 */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className={`fixed bottom-24 right-8 z-50 p-3 cursor-pointer rounded-full bg-pink-500 text-white shadow-lg hover:bg-pink-600 transition-all duration-300 ${
+        className={`fixed bottom-8 right-8 z-50 p-3 cursor-pointer rounded-full bg-pink-500 text-white shadow-lg hover:bg-pink-600 transition-all duration-300 ${
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
         }`}
         aria-label="赞赏支持"

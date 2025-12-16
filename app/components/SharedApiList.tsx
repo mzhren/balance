@@ -22,6 +22,9 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 10;
   const [newApi, setNewApi] = useState({
     provider: selectedProvider,
     apiKey: '',
@@ -53,10 +56,22 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
   const fetchApis = useCallback(async () => {
     setIsLoading(true);
     try {
+      // 获取总数
+      const { count } = await supabase
+        .from('api-key-pool')
+        .select('*', { count: 'exact', head: true });
+
+      setTotalCount(count || 0);
+
+      // 获取当前页数据
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
       const { data, error } = await supabase
         .from('api-key-pool')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) {
         console.error('获取 API 列表失败:', error);
@@ -80,7 +95,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     fetchApis();
@@ -114,6 +129,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
 
       setNewApi({ provider: 'deepseek', apiKey: '', description: '', balance: '', currency: 'CNY' });
       setShowAddForm(false);
+      setCurrentPage(1); // 重置到第一页
       await fetchApis();
     } catch (err) {
       console.error('添加 API 异常:', err);
@@ -353,6 +369,72 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 分页组件 */}
+      {totalCount > itemsPerPage && (
+        <div className="mt-6 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            共 {totalCount} 条记录，当前第 {currentPage} / {Math.ceil(totalCount / itemsPerPage)} 页
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              上一页
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.ceil(totalCount / itemsPerPage) }, (_, i) => i + 1)
+                .filter(page => {
+                  // 显示当前页前后2页
+                  return page === 1 || 
+                         page === Math.ceil(totalCount / itemsPerPage) || 
+                         Math.abs(page - currentPage) <= 2;
+                })
+                .map((page, index, array) => {
+                  // 添加省略号
+                  if (index > 0 && page - array[index - 1] > 1) {
+                    return [
+                      <span key={`ellipsis-${page}`} className="px-3 py-1.5 text-sm text-gray-400">...</span>,
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ];
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalCount / itemsPerPage), prev + 1))}
+              disabled={currentPage === Math.ceil(totalCount / itemsPerPage)}
+              className="px-3 py-1.5 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              下一页
+            </button>
+          </div>
         </div>
       )}
     </div>

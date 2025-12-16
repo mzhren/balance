@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 export default function GoTopButton() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +24,7 @@ export default function GoTopButton() {
   return (
     <button
       onClick={scrollToTop}
-      className={`fixed bottom-8 right-8 z-50 p-3 rounded-full cursor-pointer bg-orange-600 text-white shadow-lg hover:bg-orange-700 transition-all duration-300 ${
+      className={`fixed bottom-24 right-8 z-50 p-3 rounded-full cursor-pointer bg-orange-600 text-white shadow-lg hover:bg-orange-700 transition-all duration-300 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
       }`}
       aria-label="返回顶部"
