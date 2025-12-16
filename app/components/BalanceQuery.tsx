@@ -208,10 +208,10 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
       // 提取所有要保存的 API Keys
       const keysToSave = validResults.map(r => r.apiKey);
 
-      // 检查哪些 key 已经存在
+      // 检查哪些 key 已经存在，同时获取现有的余额信息
       const { data: existingData, error: checkError } = await supabase
         .from('api-key-pool')
-        .select('key')
+        .select('id, key, balance, currency')
         .in('key', keysToSave);
 
       if (checkError) {
@@ -220,47 +220,120 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
         return;
       }
 
-      const existingKeys = new Set((existingData || []).map((item: { key: string }) => item.key));
+      // 创建已存在的 key 映射表
+      const existingKeysMap = new Map(
+        (existingData || []).map((item: { id: string; key: string; balance?: number; currency?: string }) => [
+          item.key,
+          { id: item.id, balance: item.balance, currency: item.currency }
+        ])
+      );
       
-      // 过滤出不存在的 keys
-      const newResults = validResults.filter(r => !existingKeys.has(r.apiKey));
+      // 分类处理：新增、需要更新、无需变化
+      const newResults: typeof validResults = [];
+      const updateResults: Array<{ id: string; balance?: number; currency?: string; apiKey: string }> = [];
+      const unchangedResults: typeof validResults = [];
 
-      if (newResults.length === 0) {
-        alert('所有 API Key 都已存在于数据库中，无需保存');
-        return;
-      }
+      validResults.forEach(result => {
+        const existing = existingKeysMap.get(result.apiKey);
+        if (!existing) {
+          // 不存在，需要新增
+          newResults.push(result);
+        } else {
+          // 已存在，检查余额是否有变化
+          const balanceChanged = result.balance !== undefined && result.balance !== existing.balance;
+          const currencyChanged = result.currency && result.currency !== existing.currency;
+          
+          if (balanceChanged || currencyChanged) {
+            // 余额或币种有变化，需要更新
+            updateResults.push({
+              id: existing.id,
+              balance: result.balance,
+              currency: result.currency,
+              apiKey: result.apiKey,
+            });
+          } else {
+            // 数据未变化
+            unchangedResults.push(result);
+          }
+        }
+      });
 
-      // 如果有重复的，提示用户
-      if (existingKeys.size > 0) {
-        const duplicateCount = validResults.length - newResults.length;
-        if (!confirm(`检测到 ${duplicateCount} 个 API Key 已存在，是否继续保存其余 ${newResults.length} 个？`)) {
+      // 统计信息
+      let insertedCount = 0;
+      let updatedCount = 0;
+      let updateFailedCount = 0;
+
+      // 1. 插入新的 API Keys
+      if (newResults.length > 0) {
+        const insertData: Omit<ApiKeyPool, 'id' | 'created_at'>[] = newResults.map(result => ({
+          llm: result.provider,
+          key: result.apiKey,
+          balance: result.balance,
+          currency: result.currency,
+          description: undefined,
+        }));
+
+        const { error } = await supabase
+          .from('api-key-pool')
+          .insert(insertData);
+
+        if (error) {
+          console.error('插入失败:', error);
+          alert(`插入新数据失败：${error.message}`);
           return;
         }
+        insertedCount = newResults.length;
       }
 
-      const insertData: Omit<ApiKeyPool, 'id' | 'created_at'>[] = newResults.map(result => ({
-        llm: result.provider,
-        key: result.apiKey,
-        balance: result.balance,
-        currency: result.currency,
-        description: undefined,
-      }));
+      // 2. 更新现有的 API Keys（余额发生变化的）
+      if (updateResults.length > 0) {
+        // 逐个更新（因为 Supabase 不支持批量更新不同的值）
+        const updatePromises = updateResults.map(async (item) => {
+          try {
+            const { error } = await supabase
+              .from('api-key-pool')
+              .update({
+                balance: item.balance,
+                currency: item.currency,
+              })
+              .eq('id', item.id);
 
-      const { error } = await supabase
-        .from('api-key-pool')
-        .insert(insertData);
+            if (error) {
+              console.error(`更新失败 (${item.apiKey}):`, error);
+              return { success: false, error };
+            }
+            return { success: true };
+          } catch (err) {
+            console.error(`更新异常 (${item.apiKey}):`, err);
+            return { success: false, error: err };
+          }
+        });
 
-      if (error) {
-        console.error('保存失败:', error);
-        alert('保存失败：' + error.message);
-        return;
+        const updateResults_results = await Promise.all(updatePromises);
+        updatedCount = updateResults_results.filter(r => r.success).length;
+        updateFailedCount = updateResults_results.filter(r => !r.success).length;
       }
 
-      const message = existingKeys.size > 0
-        ? `成功保存 ${newResults.length} 个新 API Key 到数据库（跳过 ${existingKeys.size} 个已存在的）`
-        : `成功保存 ${newResults.length} 个 API Key 到数据库`;
+      // 生成详细的结果消息
+      const messages: string[] = [];
+      if (insertedCount > 0) {
+        messages.push(`✅ 新增 ${insertedCount} 条`);
+      }
+      if (updatedCount > 0) {
+        messages.push(`🔄 更新余额成功 ${updatedCount} 条`);
+      }
+      if (updateFailedCount > 0) {
+        messages.push(`❌ 更新失败 ${updateFailedCount} 条`);
+      }
+      if (unchangedResults.length > 0) {
+        messages.push(`ℹ️ 数据未变化 ${unchangedResults.length} 条`);
+      }
+
+      const summary = messages.length > 0 
+        ? `操作完成：\n${messages.join('\n')}` 
+        : '没有需要处理的数据';
       
-      alert(message);
+      alert(summary);
     } catch (err) {
       console.error('保存异常:', err);
       alert('保存失败，请重试');
