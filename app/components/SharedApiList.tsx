@@ -220,7 +220,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -243,7 +243,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
               <select
                 value={newApi.provider}
                 onChange={(e) => setNewApi({ ...newApi, provider: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
               >
                 {providers.map(provider => (
                   <option key={provider.value} value={provider.value}>
@@ -261,7 +261,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
                 value={newApi.apiKey}
                 onChange={(e) => setNewApi({ ...newApi, apiKey: e.target.value })}
                 placeholder="sk-xxxxxxxxxxxxx"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white font-mono text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white font-mono text-sm"
               />
             </div>
             <div>
@@ -273,7 +273,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
                 value={newApi.description}
                 onChange={(e) => setNewApi({ ...newApi, description: e.target.value })}
                 placeholder="用于测试环境"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -287,7 +287,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
                   value={newApi.balance}
                   onChange={(e) => setNewApi({ ...newApi, balance: e.target.value })}
                   placeholder="100.00"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
                 />
               </div>
               <div>
@@ -307,7 +307,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
             <div className="flex gap-3">
               <button
                 onClick={handleAddApi}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 确认添加
               </button>
@@ -424,7 +424,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
                         onClick={() => setCurrentPage(page)}
                         className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
                           currentPage === page
-                            ? 'bg-blue-600 text-white border-blue-600'
+                            ? 'bg-green-600 text-white border-green-600'
                             : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
                       >
@@ -438,7 +438,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
                         currentPage === page
-                          ? 'bg-blue-600 text-white border-blue-600'
+                          ? 'bg-green-600 text-white border-green-600'
                           : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
                       }`}
                     >

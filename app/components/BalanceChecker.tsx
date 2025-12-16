@@ -31,7 +31,7 @@ function ProviderSelector({ selectedProvider, onSelectProvider }: ProviderSelect
             onClick={() => onSelectProvider(provider.value)}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               selectedProvider === provider.value
-                ? 'bg-blue-600 text-white shadow-md scale-105'
+                ? 'bg-green-600 text-white shadow-md scale-105'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
@@ -56,7 +56,7 @@ export default function BalanceChecker() {
             onClick={() => setActiveTab('balance')}
             className={`flex-1 px-6 py-3 font-semibold rounded-md transition-all duration-200 ${
               activeTab === 'balance'
-                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md'
+                ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-md'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
@@ -72,7 +72,7 @@ export default function BalanceChecker() {
             onClick={() => setActiveTab('shared')}
             className={`flex-1 px-6 py-3 font-semibold rounded-md transition-all duration-200 ${
               activeTab === 'shared'
-                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md'
+                ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-md'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
