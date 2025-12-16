@@ -33,10 +33,11 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
     currency: 'CNY',
   });
 
-  // 检查 URL 参数中是否有 user=admin
+  // 检查 URL 参数中是否有 user=管理员用户名
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    setIsAdmin(searchParams.get('user') === 'admin');
+    const adminUsername = process.env.NEXT_PUBLIC_ADMIN_USERNAME;
+    setIsAdmin(searchParams.get('user') === adminUsername);
   }, []);
 
   // 当 selectedProvider 改变时，更新 newApi 的 provider
