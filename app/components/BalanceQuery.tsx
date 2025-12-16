@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, type ApiKeyPool } from '@/lib/supabase';
 
 export interface BalanceResult {
@@ -13,17 +13,73 @@ export interface BalanceResult {
   error?: string;
   status: 'success' | 'error' | 'loading';
   details?: unknown;
+  timestamp?: string;
 }
 
 interface BalanceQueryProps {
   selectedProvider: string;
 }
 
+const HISTORY_STORAGE_KEY = 'balance_query_history';
+const MAX_HISTORY_ITEMS = 50; // 最多保存50条历史记录
+
 export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
   const [apiKeysInput, setApiKeysInput] = useState('');
   const [results, setResults] = useState<BalanceResult[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [queryHistory, setQueryHistory] = useState<BalanceResult[]>([]);
+
+  // 从 localStorage 加载历史记录
+  useEffect(() => {
+    try {
+      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (savedHistory) {
+        const history = JSON.parse(savedHistory);
+        setQueryHistory(history);
+      }
+    } catch (error) {
+      console.error('加载历史记录失败:', error);
+    }
+  }, []);
+
+  // 保存查询结果到 localStorage
+  const saveToHistory = (results: BalanceResult[]) => {
+    try {
+      // 为每个结果添加时间戳
+      const resultsWithTimestamp = results.map(result => ({
+        ...result,
+        timestamp: new Date().toISOString(),
+      }));
+
+      // 获取现有历史记录
+      const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      const existingHistory: BalanceResult[] = savedHistory ? JSON.parse(savedHistory) : [];
+
+      // 合并新结果和现有历史（新结果在前）
+      const updatedHistory = [...resultsWithTimestamp, ...existingHistory]
+        .slice(0, MAX_HISTORY_ITEMS); // 限制历史记录数量
+
+      // 保存到 localStorage
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+      setQueryHistory(updatedHistory);
+    } catch (error) {
+      console.error('保存历史记录失败:', error);
+    }
+  };
+
+  // 清空历史记录
+  const clearHistory = () => {
+    if (confirm('确定要清空所有历史记录吗？')) {
+      try {
+        localStorage.removeItem(HISTORY_STORAGE_KEY);
+        setQueryHistory([]);
+        alert('历史记录已清空');
+      } catch (error) {
+        console.error('清空历史记录失败:', error);
+      }
+    }
+  };
 
   const parseApiKeys = (input: string): string[] => {
     // 支持换行符或逗号分隔
@@ -92,6 +148,10 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
     const allResults = await Promise.all(promises);
 
     setResults(allResults);
+    
+    // 保存到历史记录
+    saveToHistory(allResults);
+    
     setIsChecking(false);
   };
 
@@ -237,7 +297,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
         <button
           onClick={handleQuery}
           disabled={isChecking || apiKeysInput.trim() === ''}
-          className="w-full px-6 py-4 bg-linear-to-r from-blue-600 to-blue-700 text-white text-lg font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+          className="w-full px-6 py-4 bg-linear-to-r from-green-600 to-green-700 text-white text-lg font-semibold rounded-lg hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
         >
           {isChecking ? (
             <>
@@ -409,6 +469,97 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 查询历史记录 */}
+      {!isChecking && queryHistory.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              查询历史
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+                （共 {queryHistory.length} 条记录）
+              </span>
+            </h3>
+            <button
+              onClick={clearHistory}
+              className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            >
+              清空历史
+            </button>
+          </div>
+
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {queryHistory.map((record, index) => (
+              <div
+                key={`${record.apiKey}-${record.timestamp}-${index}`}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="inline-block px-2.5 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
+                        {getProviderLabel(record.provider)}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {record.timestamp ? new Date(record.timestamp).toLocaleString('zh-CN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        }) : ''}
+                      </span>
+                      {record.status === 'success' && (
+                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {record.status === 'error' && (
+                        <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-mono">
+                      {record.apiKey.slice(0, 12)}...{record.apiKey.slice(-8)}
+                    </div>
+
+                    {record.status === 'success' && record.balance !== undefined && (
+                      <div className="text-sm">
+                        <span className="font-semibold text-green-600 dark:text-green-400">
+                          余额: {Number(record.balance).toFixed(4)} {record.currency || 'USD'}
+                        </span>
+                      </div>
+                    )}
+
+                    {record.status === 'error' && record.error && (
+                      <div className="text-sm text-red-600 dark:text-red-400">
+                        错误: {record.error}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 重新查询按钮 */}
+                  <button
+                    onClick={() => {
+                      setApiKeysInput(record.apiKey);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="shrink-0 p-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    title="重新查询"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             ))}
