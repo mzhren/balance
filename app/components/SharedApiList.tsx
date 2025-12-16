@@ -109,6 +109,25 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
 
     setIsLoading(true);
     try {
+      // 先检查该 API Key 是否已存在
+      const { data: existingData, error: checkError } = await supabase
+        .from('api-key-pool')
+        .select('id')
+        .eq('key', newApi.apiKey)
+        .limit(1);
+
+      if (checkError) {
+        console.error('检查 API Key 失败:', checkError);
+        alert('检查失败：' + checkError.message);
+        return;
+      }
+
+      if (existingData && existingData.length > 0) {
+        alert('该 API Key 已存在，添加失败！');
+        return;
+      }
+
+      // 不存在则插入
       const insertData: Omit<ApiKeyPool, 'id' | 'created_at'> = {
         llm: newApi.provider,
         key: newApi.apiKey,
@@ -127,6 +146,7 @@ export default function SharedApiList({ selectedProvider }: SharedApiListProps) 
         return;
       }
 
+      alert('添加成功！');
       setNewApi({ provider: 'deepseek', apiKey: '', description: '', balance: '', currency: 'CNY' });
       setShowAddForm(false);
       setCurrentPage(1); // 重置到第一页

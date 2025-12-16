@@ -145,7 +145,40 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
 
     setIsChecking(true);
     try {
-      const insertData: Omit<ApiKeyPool, 'id' | 'created_at'>[] = validResults.map(result => ({
+      // 提取所有要保存的 API Keys
+      const keysToSave = validResults.map(r => r.apiKey);
+
+      // 检查哪些 key 已经存在
+      const { data: existingData, error: checkError } = await supabase
+        .from('api-key-pool')
+        .select('key')
+        .in('key', keysToSave);
+
+      if (checkError) {
+        console.error('检查失败:', checkError);
+        alert('检查失败：' + checkError.message);
+        return;
+      }
+
+      const existingKeys = new Set((existingData || []).map((item: { key: string }) => item.key));
+      
+      // 过滤出不存在的 keys
+      const newResults = validResults.filter(r => !existingKeys.has(r.apiKey));
+
+      if (newResults.length === 0) {
+        alert('所有 API Key 都已存在于数据库中，无需保存');
+        return;
+      }
+
+      // 如果有重复的，提示用户
+      if (existingKeys.size > 0) {
+        const duplicateCount = validResults.length - newResults.length;
+        if (!confirm(`检测到 ${duplicateCount} 个 API Key 已存在，是否继续保存其余 ${newResults.length} 个？`)) {
+          return;
+        }
+      }
+
+      const insertData: Omit<ApiKeyPool, 'id' | 'created_at'>[] = newResults.map(result => ({
         llm: result.provider,
         key: result.apiKey,
         balance: result.balance,
@@ -163,7 +196,11 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
         return;
       }
 
-      alert(`成功保存 ${validResults.length} 个 API Key 到数据库`);
+      const message = existingKeys.size > 0
+        ? `成功保存 ${newResults.length} 个新 API Key 到数据库（跳过 ${existingKeys.size} 个已存在的）`
+        : `成功保存 ${newResults.length} 个 API Key 到数据库`;
+      
+      alert(message);
     } catch (err) {
       console.error('保存异常:', err);
       alert('保存失败，请重试');
@@ -200,7 +237,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
         <button
           onClick={handleQuery}
           disabled={isChecking || apiKeysInput.trim() === ''}
-          className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-lg font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+          className="w-full px-6 py-4 bg-linear-to-r from-blue-600 to-blue-700 text-white text-lg font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
         >
           {isChecking ? (
             <>
@@ -327,7 +364,7 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
                     {/* 错误状态 */}
                     {result.status === 'error' && (
                       <div className="flex items-start gap-2 text-red-600 dark:text-red-400">
-                        <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="text-sm">{result.error}</span>
