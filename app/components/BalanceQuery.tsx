@@ -203,10 +203,29 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
       return;
     }
 
+    // 过滤出余额大于 0.1 的结果
+    const filteredResults = validResults.filter(r => {
+      const balance = r.balance ?? 0;
+      return balance > 0.1;
+    });
+
+    if (filteredResults.length === 0) {
+      alert('没有余额大于 0.1 的 API Key 可以保存');
+      return;
+    }
+
+    // 如果有被过滤掉的 key，提示用户
+    const filteredOutCount = validResults.length - filteredResults.length;
+    if (filteredOutCount > 0) {
+      if (!confirm(`检测到 ${filteredOutCount} 个 API Key 余额不足 0.1，将被跳过。\n继续保存其余 ${filteredResults.length} 个 API Key？`)) {
+        return;
+      }
+    }
+
     setIsChecking(true);
     try {
       // 提取所有要保存的 API Keys
-      const keysToSave = validResults.map(r => r.apiKey);
+      const keysToSave = filteredResults.map(r => r.apiKey);
 
       // 检查哪些 key 已经存在，同时获取现有的余额信息
       const { data: existingData, error: checkError } = await supabase
@@ -229,11 +248,11 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
       );
       
       // 分类处理：新增、需要更新、无需变化
-      const newResults: typeof validResults = [];
+      const newResults: typeof filteredResults = [];
       const updateResults: Array<{ id: string; balance?: number; currency?: string; apiKey: string }> = [];
-      const unchangedResults: typeof validResults = [];
+      const unchangedResults: typeof filteredResults = [];
 
-      validResults.forEach(result => {
+      filteredResults.forEach(result => {
         const existing = existingKeysMap.get(result.apiKey);
         if (!existing) {
           // 不存在，需要新增
@@ -327,6 +346,9 @@ export default function BalanceQuery({ selectedProvider }: BalanceQueryProps) {
       }
       if (unchangedResults.length > 0) {
         messages.push(`ℹ️ 数据未变化 ${unchangedResults.length} 条`);
+      }
+      if (filteredOutCount > 0) {
+        messages.push(`⚠️ 余额不足 0.1，已跳过 ${filteredOutCount} 条`);
       }
 
       const summary = messages.length > 0 
